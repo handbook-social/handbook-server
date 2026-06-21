@@ -13,16 +13,19 @@ import {
 import { ConversationRepository } from '../repositories/conversation.repository';
 import { BaseService } from './base.service';
 import { ConversationMemberService } from './conversation-member.service';
+import { GroupMemberService } from './group-member.service';
 
 export class ConversationService extends BaseService<IConversationModel> {
     private conversationRepository: ConversationRepository;
     private conversationMemberService: ConversationMemberService;
+    private groupMemberService: GroupMemberService;
 
     constructor() {
         const repository = new ConversationRepository();
         super(repository);
         this.conversationRepository = repository;
         this.conversationMemberService = new ConversationMemberService();
+        this.groupMemberService = new GroupMemberService();
     }
 
     /**
@@ -163,7 +166,7 @@ export class ConversationService extends BaseService<IConversationModel> {
                 );
             }
 
-            // Check if user is member (for private conversations)
+            // Check permissions based on conversation type
             if (conversation.type === EConversationType.PRIVATE) {
                 const isMember = await this.conversationMemberService.isMember(
                     conversationId,
@@ -175,6 +178,32 @@ export class ConversationService extends BaseService<IConversationModel> {
                         'You do not have permission to access this conversation',
                         HTTP_STATUS.FORBIDDEN
                     );
+                }
+            } else if (conversation.type === EConversationType.GROUP) {
+                if (conversation.group) {
+                    // If it is a group conversation, the user must be a member of the group
+                    const isGroupMember = await this.groupMemberService.isMember(
+                        conversation.group.toString(),
+                        userId
+                    );
+                    if (!isGroupMember) {
+                        throw new AppError(
+                            'You do not have permission to access this group conversation',
+                            HTTP_STATUS.FORBIDDEN
+                        );
+                    }
+                } else {
+                    // Independent group chat without group association, user must be a member of the conversation
+                    const isMember = await this.conversationMemberService.isMember(
+                        conversationId,
+                        userId
+                    );
+                    if (!isMember) {
+                        throw new AppError(
+                            'You do not have permission to access this conversation',
+                            HTTP_STATUS.FORBIDDEN
+                        );
+                    }
                 }
             }
 
@@ -244,17 +273,48 @@ export class ConversationService extends BaseService<IConversationModel> {
             this.validateId(conversationId, 'Conversation ID');
             this.validateId(participantId, 'Participant ID');
 
-            // Check if requester is a member
-            const isMember = await this.conversationMemberService.isMember(
-                conversationId,
-                userId
-            );
+            // If the user is trying to join the conversation themselves
+            if (userId === participantId) {
+                const conversation = await this.getByIdOrThrow(conversationId);
 
-            if (!isMember) {
-                throw new AppError(
-                    'You do not have permission to add participants',
-                    HTTP_STATUS.FORBIDDEN
+                // Allow self-join if it's a group conversation and the user is a member of the linked Group
+                if (conversation.type === EConversationType.GROUP) {
+                    if (conversation.group) {
+                        const isGroupMember = await this.groupMemberService.isMember(
+                            conversation.group.toString(),
+                            userId
+                        );
+                        if (!isGroupMember) {
+                            throw new AppError(
+                                'You must be a member of the group to join this conversation',
+                                HTTP_STATUS.FORBIDDEN
+                            );
+                        }
+                    } else {
+                        throw new AppError(
+                            'You do not have permission to join this conversation directly',
+                            HTTP_STATUS.FORBIDDEN
+                        );
+                    }
+                } else {
+                    throw new AppError(
+                        'You cannot join a private conversation directly',
+                        HTTP_STATUS.FORBIDDEN
+                    );
+                }
+            } else {
+                // Otherwise, the requester must already be a member of the conversation to add others
+                const isMember = await this.conversationMemberService.isMember(
+                    conversationId,
+                    userId
                 );
+
+                if (!isMember) {
+                    throw new AppError(
+                        'You do not have permission to add participants',
+                        HTTP_STATUS.FORBIDDEN
+                    );
+                }
             }
 
             // Add new participant as member

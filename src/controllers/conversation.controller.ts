@@ -1,16 +1,18 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import { ConversationMemberService, ConversationService } from '../services';
+import { ConversationMemberService, ConversationService, GroupMemberService } from '../services';
 import { BaseController } from './base.controller';
 
 export class ConversationController extends BaseController {
     private conversationService: ConversationService;
     private conversationMemberService: ConversationMemberService;
+    private groupMemberService: GroupMemberService;
 
     constructor() {
         super();
         this.conversationService = new ConversationService();
         this.conversationMemberService = new ConversationMemberService();
+        this.groupMemberService = new GroupMemberService();
     }
 
     /**
@@ -443,6 +445,63 @@ export class ConversationController extends BaseController {
                 res,
                 result.data,
                 'Conversation retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * GET /api/v1/conversations/:id/access
+     * Check if user has access to conversation
+     */
+    public checkAccess = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const id = req.params.id;
+            this.validateRequiredParam(id, 'Conversation ID');
+            const userId = this.getAuthenticatedUserId(req);
+
+            const conversation = await this.conversationService.getById(id);
+            if (!conversation) {
+                ResponseUtil.success(
+                    res,
+                    { hasAccess: false, isMember: false, isGroupMember: false },
+                    'Conversation not found'
+                );
+                return;
+            }
+
+            let hasAccess = false;
+            const isMember = await this.conversationMemberService.isMember(id, userId);
+            let isGroupMember = false;
+
+            if (conversation.type === 'private') {
+                hasAccess = isMember;
+            } else if (conversation.type === 'group') {
+                if (conversation.group) {
+                    isGroupMember = await this.groupMemberService.isMember(
+                        conversation.group.toString(),
+                        userId
+                    );
+                    // A user has access if they are already in the conversation or are part of the linked Group
+                    hasAccess = isMember || isGroupMember;
+                } else {
+                    hasAccess = isMember;
+                }
+            }
+
+            ResponseUtil.success(
+                res,
+                {
+                    hasAccess,
+                    isMember,
+                    isGroupMember,
+                },
+                'Access check completed'
             );
         } catch (error) {
             next(error);

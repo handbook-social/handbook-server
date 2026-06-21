@@ -23,6 +23,13 @@ const conversationRoutes: IApiRoute[] = [
         isRateLimited: true,
     },
     {
+        path: '/:id/access',
+        method: EApiMethod.GET,
+        controller: conversationController.checkAccess,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
         path: '/:id/members',
         method: EApiMethod.GET,
         controller: conversationController.listMembers,
