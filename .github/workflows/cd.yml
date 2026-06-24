@@ -20,7 +20,7 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/server-api
-  APP_DIR: /app/handbook/infra
+  APP_DIR: /root/infra
 
 jobs:
   build-and-push:
