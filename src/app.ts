@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import morgan from 'morgan';
+import promClient from 'prom-client';
 import { env } from './common/config';
 import {
     globalErrorHandler,
@@ -14,6 +15,9 @@ import {
 } from './common/errors';
 
 dotenv.config();
+
+// Collect default metrics for Prometheus
+promClient.collectDefaultMetrics();
 
 const app = express();
 app.set('trust proxy', 1);
@@ -58,6 +62,12 @@ app.get('/', (req, res) => {
         message: 'Server is running',
         timestamp: new Date().toISOString(),
     });
+});
+
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', promClient.register.contentType);
+    res.end(await promClient.register.metrics());
 });
 
 app.use(notFoundHandler);

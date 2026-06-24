@@ -7,6 +7,7 @@ import {
 } from './common/utils/mongodb';
 import redis from './common/utils/redis';
 import { redisPubSubService } from './services/redis-pubsub.service';
+import logger from './common/logger';
 
 let server: ReturnType<typeof app.listen> | null = null;
 
@@ -20,7 +21,7 @@ const startServer = async (): Promise<void> => {
 
         // Start the Express server
         server = app.listen(env.PORT, () => {
-            console.log(
+            logger.info(
                 `Server is running on port: ${env.PORT} (${env.NODE_ENV})`
             );
         });
@@ -38,17 +39,17 @@ const startServer = async (): Promise<void> => {
 
             switch (error.code) {
                 case 'EACCES':
-                    console.error(`${bind} requires elevated privileges`);
+                    logger.error(`${bind} requires elevated privileges`);
                     process.exit(1);
                 case 'EADDRINUSE':
-                    console.error(`${bind} is already in use`);
+                    logger.error(`${bind} is already in use`);
                     process.exit(1);
                 default:
                     throw error;
             }
         });
     } catch (error) {
-        console.error('Failed to start server:', error);
+        logger.error('Failed to start server:', error as Error);
         process.exit(1);
     }
 };
@@ -57,11 +58,11 @@ const startServer = async (): Promise<void> => {
  * Gracefully shuts down the server
  */
 const shutdown = async (signal: string): Promise<void> => {
-    console.log(`\n${signal} received. Shutting down gracefully...`);
+    logger.info(`\n${signal} received. Shutting down gracefully...`);
 
     if (server) {
         server.close(async () => {
-            console.log('HTTP server closed');
+            logger.info('HTTP server closed');
 
             try {
                 // Disconnect from MongoDB
@@ -72,36 +73,34 @@ const shutdown = async (signal: string): Promise<void> => {
                 // Disconnect from Redis
                 try {
                     await redis.quit();
-                    console.log('Redis client disconnected');
+                    logger.info('Redis client disconnected');
                 } catch (redisError) {
-                    console.warn(
-                        'Redis client disconnect warning:',
-                        redisError
+                    logger.warn(
+                        'Redis client disconnect warning: ' + (redisError as Error).message
                     );
                 }
 
                 // Disconnect from Redis Pub/Sub
                 try {
                     await redisPubSubService.disconnect();
-                    console.log('Redis Pub/Sub disconnected');
+                    logger.info('Redis Pub/Sub disconnected');
                 } catch (pubsubError) {
-                    console.warn(
-                        'Redis Pub/Sub disconnect warning:',
-                        pubsubError
+                    logger.warn(
+                        'Redis Pub/Sub disconnect warning: ' + (pubsubError as Error).message
                     );
                 }
 
-                console.log('Graceful shutdown completed');
+                logger.info('Graceful shutdown completed');
                 process.exit(0);
             } catch (error) {
-                console.error('Error during shutdown:', error);
+                logger.error('Error during shutdown:', error as Error);
                 process.exit(1);
             }
         });
 
         // Force close after 10 seconds
         setTimeout(() => {
-            console.error(
+            logger.error(
                 'Forced shutdown after timeout. Some connections may not have closed properly.'
             );
             process.exit(1);
@@ -117,12 +116,12 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    logger.error('Unhandled Rejection at: ' + promise + ' reason: ' + reason);
     shutdown('unhandledRejection');
 });
 
 // Start the server
 startServer().catch((error) => {
-    console.error('Fatal error starting server:', error);
+    logger.error('Fatal error starting server:', error as Error);
     process.exit(1);
 });
