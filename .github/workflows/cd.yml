@@ -84,6 +84,7 @@ jobs:
             # Login to GHCR to pull private image
             echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
             
+            export IMAGE_REF
             # Pull the new image
             docker pull "${IMAGE_REF}"
             
