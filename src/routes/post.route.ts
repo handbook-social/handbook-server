@@ -43,7 +43,7 @@ const postRoutes: IApiRoute[] = [
         path: '/new-feed',
         method: EApiMethod.GET,
         controller: postController.getNewFeedPosts,
-        isPrivateRoute: true,
+        isPrivateRoute: false,
         isRateLimited: true,
     },
     {

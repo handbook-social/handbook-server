@@ -266,12 +266,26 @@ export class PostService extends BaseService<IPostModel> {
      * @returns Paginated posts with interactions
      */
     async getNewFeedPosts(
-        userId: string,
+        userId: string | undefined,
         page: number,
         pageSize: number
     ): Promise<PaginationResult<IPostWithInteraction>> {
-        this.validateId(userId, 'User ID');
         this.validatePagination(page, pageSize);
+
+        if (!userId) {
+            const filters = {
+                group: null,
+                option: EPostOption.PUBLIC,
+            };
+            return await this.postRepository.findManyWithInteraction(
+                filters,
+                '',
+                page,
+                pageSize
+            );
+        }
+
+        this.validateId(userId, 'User ID');
 
         const [followingIds, friendIds] = await Promise.all([
             this.followService.getFollowingIds(userId),

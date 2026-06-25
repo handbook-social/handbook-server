@@ -86,7 +86,7 @@ export class PostRepository extends BaseRepository<IPostModel> {
      */
     public async findManyWithInteraction(
         filter: FilterQuery<IPostModel>,
-        userId: string,
+        userId: string | undefined,
         page: number,
         pageSize: number
     ): Promise<PaginationResult<IPostWithInteraction>> {
@@ -105,17 +105,20 @@ export class PostRepository extends BaseRepository<IPostModel> {
             this.model.countDocuments(filter),
         ]);
 
-        const interactions = await PostInteraction.find({
-            user: userId,
-            post: { $in: posts.map((post) => post._id) },
-            type: {
-                $in: [
-                    EPostInteractionType.LOVE,
-                    EPostInteractionType.SHARE,
-                    EPostInteractionType.SAVE,
-                ],
-            },
-        }).lean();
+        let interactions: any[] = [];
+        if (userId) {
+            interactions = await PostInteraction.find({
+                user: userId,
+                post: { $in: posts.map((post) => post._id) },
+                type: {
+                    $in: [
+                        EPostInteractionType.LOVE,
+                        EPostInteractionType.SHARE,
+                        EPostInteractionType.SAVE,
+                    ],
+                },
+            }).lean();
+        }
 
         const interactionMap = new Map<string, Set<EPostInteractionType>>();
         interactions.forEach((interaction) => {

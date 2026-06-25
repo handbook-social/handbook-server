@@ -153,7 +153,7 @@ export class PostController extends BaseController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = this.getAuthenticatedUserId(req);
+            const userId = this.getOptionalUserId(req);
             const { page, pageSize } = this.getPaginationParams(req, 3);
 
             const result = await this.postService.getNewFeedPosts(
