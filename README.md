@@ -1,59 +1,115 @@
-# Express API Starter with Typescript
+# Handbook Backend API
 
-How to use this template:
+Đây là dịch vụ Backend API chính của dự án **Handbook**, được xây dựng dựa trên Express.js, TypeScript và Node.js. Dự án đóng vai trò là **Single Source of Truth** về mặt dữ liệu, kết nối với MongoDB để quản lý trạng thái và sử dụng Redis Pub/Sub làm Event Broker để truyền thông tin sự kiện thời gian thực (realtime) tới `realtime-server`.
 
-```sh
-npx create-express-api --typescript --directory my-api-name
+---
+
+## 🛠️ Công nghệ & Thư viện sử dụng (Tech Stack)
+
+- **Ngôn ngữ & Runtime**: Node.js (v20+), TypeScript, Express.js.
+- **Cơ sở dữ liệu**: MongoDB (Mongoose ODM).
+- **Caching & Broker**: Redis (ioredis), BullMQ (quản lý hàng đợi công việc nền).
+- **Xác thực**: JWT (Access Token & Refresh Token), Custom Refresh Token Rotation, tích hợp Google OAuth.
+- **AI Integration**: `@google/generative-ai` (Gemini API).
+- **Mail Service**: Nodemailer & Resend API.
+- **Bảo mật & Tiện ích**: Helmet, CORS, Express Rate Limit (Redis back-end), Morgan, Winston logger, Multer (upload file qua Cloudinary).
+- **Giám sát**: Prometheus metrics (`prom-client`).
+
+---
+
+## 📂 Cấu trúc mã nguồn (Project Structure)
+
+Mã nguồn được tổ chức theo cấu trúc phân lớp rõ ràng nhằm tối ưu hóa khả năng mở rộng:
+```text
+server-api/
+├── src/
+│   ├── common/         # Cấu hình chung, logger, các utils (database, redis...)
+│   ├── controllers/    # Xử lý HTTP Request và trả về HTTP Response
+│   ├── middlewares/    # Middleware xử lý auth, validation, rate-limiting, uploads...
+│   ├── models/         # Khai báo schema Mongoose (MongoDB Models)
+│   ├── repositories/   # Lớp trung gian thực hiện các truy vấn cơ sở dữ liệu
+│   ├── routes/         # Định nghĩa routing các API endpoints
+│   ├── services/       # Lớp xử lý logic nghiệp vụ chính (Business Logic)
+│   ├── validations/    # Zod schemas để validate dữ liệu đầu vào của request
+│   ├── app.ts          # Khởi tạo Express app và đăng ký các middleware toàn cục
+│   └── server.ts       # Điểm khởi chạy Server & xử lý graceful shutdown
+├── migration/          # Các script di cư dữ liệu qua các phiên bản
+├── public/             # Tài nguyên tĩnh dùng chung
+└── scripts/            # Các helper script hỗ trợ phát triển và vận hành
 ```
 
-Includes API Server utilities:
+---
 
--   [morgan](https://www.npmjs.com/package/morgan)
-    -   HTTP request logger middleware for node.js
--   [helmet](https://www.npmjs.com/package/helmet)
-    -   Helmet helps you secure your Express apps by setting various HTTP headers. It's not a silver bullet, but it can help!
--   [dotenv](https://www.npmjs.com/package/dotenv)
-    -   Dotenv is a zero-dependency module that loads environment variables from a `.env` file into `process.env`
--   [cors](https://www.npmjs.com/package/cors)
-    -   CORS is a node.js package for providing a Connect/Express middleware that can be used to enable CORS with various options.
+## 🚦 Danh sách API Endpoints chính
 
-Development utilities:
+Tất cả các route được đăng ký dưới tiền tố `/api` (hoặc cấu hình tùy chỉnh):
 
--   [typescript](https://www.npmjs.com/package/typescript)
-    -   TypeScript is a language for application-scale JavaScript.
--   [ts-node](https://www.npmjs.com/package/ts-node)
-    -   TypeScript execution and REPL for node.js, with source map and native ESM support.
--   [nodemon](https://www.npmjs.com/package/nodemon)
-    -   nodemon is a tool that helps develop node.js based applications by automatically restarting the node application when file changes in the directory are detected.
--   [eslint](https://www.npmjs.com/package/eslint)
-    -   ESLint is a tool for identifying and reporting on patterns found in ECMAScript/JavaScript code.
--   [typescript-eslint](https://typescript-eslint.io/)
-    -   Tooling which enables ESLint to support TypeScript.
--   [jest](https://www.npmjs.com/package/jest)
-    -   Jest is a delightful JavaScript Testing Framework with a focus on simplicity.
--   [supertest](https://www.npmjs.com/package/supertest)
-    -   HTTP assertions made easy via superagent.
+- **`/auth`**: Đăng ký, đăng nhập, làm mới token (Refresh Token), tích hợp Google OAuth.
+- **`/users` & `/follows` & `/friendships`**: Quản lý hồ sơ người dùng, theo dõi và thiết lập bạn bè.
+- **`/posts` & `/comments` & `/categories`**: Viết bài, tương tác bài viết (like/reaction), bình luận và quản lý danh mục.
+- **`/conversations` & `/messages`**: Tạo phòng trò chuyện (direct/group chat) và gửi tin nhắn.
+- **`/notifications`**: Truy vấn và cập nhật trạng thái thông báo của người dùng.
+- **`/groups` & `/items`**: Quản lý nhóm và các vật phẩm/danh mục liên quan.
+- **`/uploads` & `/medias` & `/images`**: Upload hình ảnh, video, tài liệu lưu trữ thông qua Cloudinary.
+- **`/handbook-ai`**: Tích hợp chatbot AI (sử dụng Gemini API) để phản hồi người dùng.
 
-## Setup
+---
 
+## ⚙️ Hướng dẫn cài đặt & Chạy ứng dụng
+
+### 1. Yêu cầu hệ thống
+- **Node.js** v20.x trở lên.
+- **MongoDB** và **Redis** đã hoạt động (có thể chạy nhanh qua Docker Compose của dự án gốc).
+
+### 2. Thiết lập biến môi trường (`.env`)
+Sao chép tệp cấu hình mẫu và điền đầy đủ các thông số:
+```bash
+cp .env.example .env
 ```
+Các tham số cấu hình quan trọng:
+- `MONGODB_URI`: URL kết nối tới MongoDB.
+- `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`: Thông tin kết nối Redis.
+- `JWT_SECRET` & `JWT_REFRESH_SECRET`: Khóa bí mật dùng để ký và xác thực mã JWT.
+- `CLOUDINARY_NAME`, `CLOUDINARY_KEY`, `CLOUDINARY_SECRET`: Tài khoản lưu trữ media Cloudinary.
+- `AI_API_KEY`, `AI_MODEL`: API Key và cấu hình model của Google Generative AI (Gemini).
+- `INTERNAL_SECRET_KEY`: Khóa bảo mật giao tiếp nội bộ giữa `server-api` và `realtime-server`.
+
+### 3. Cài đặt các gói phụ thuộc
+```bash
 npm install
 ```
 
-## Lint
-
-```
-npm run lint
-```
-
-## Test
-
-```
-npm run test
-```
-
-## Development
-
-```
+### 4. Chạy ứng dụng trong môi trường phát triển (Dev)
+```bash
 npm run dev
 ```
+API Server sẽ khởi động trên cổng được cấu hình (mặc định `8080` hoặc `3001` phụ thuộc vào `.env`).
+
+### 5. Xây dựng bản phát hành và chạy Production
+```bash
+# Biên dịch mã nguồn TypeScript sang JavaScript
+npm run build
+
+# Khởi chạy ứng dụng production từ thư mục dist
+npm start
+```
+
+---
+
+## 🧪 Các câu lệnh bổ trợ (Scripts)
+
+- **Kiểm tra cú pháp (Linting)**:
+  ```bash
+  npm run lint
+  ```
+- **Kiểm tra kiểu dữ liệu (Type checking)**:
+  ```bash
+  npm run typecheck
+  ```
+- **Chạy kiểm thử tự động (Jest)**:
+  ```bash
+  npm run test
+  ```
+
+---
+*Lưu ý: Để đảm bảo kiến trúc hướng sự kiện hoạt động chính xác, mọi thay đổi dữ liệu (Write) phải đi qua REST API của `server-api` này để phát đi sự kiện Redis Pub/Sub đồng bộ tới `realtime-server`.*
