@@ -86,7 +86,7 @@ jobs:
             
             export IMAGE_REF
             # Clean up unused Docker resources to free up disk space
-            docker system prune -af
+            docker system prune -af || true
             
             # Pull the new image
             docker pull "${IMAGE_REF}"
