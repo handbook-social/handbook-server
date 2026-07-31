@@ -117,9 +117,10 @@ export const globalErrorHandler = (
 
     // Log error details
     console.error('Error Details:', {
-        message: error.message,
-        statusCode: error.statusCode,
-        stack: error.stack,
+        message: err.message || error.message,
+        statusCode: err.statusCode || error.statusCode,
+        stack: err.stack,
+        details: err.details || error.details,
         url: req.url,
         method: req.method,
         timestamp: new Date().toISOString(),
