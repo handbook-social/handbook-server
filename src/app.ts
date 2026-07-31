@@ -14,6 +14,8 @@ import {
     notFoundHandler,
 } from './common/errors';
 
+import { maintenanceMiddleware } from './middlewares/maintenance.middleware';
+
 dotenv.config();
 
 // Collect default metrics for Prometheus
@@ -42,6 +44,9 @@ app.use(
         credentials: true,
     })
 );
+
+// Apply maintenance middleware to protect API routes early
+app.use(maintenanceMiddleware);
 
 app.use('/api/v1', apiRouter);
 

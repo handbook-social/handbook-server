@@ -57,6 +57,10 @@ const envSchema = z.object({
     // Realtime Service
     REALTIME_SERVICE_URL: z.string(),
     INTERNAL_SECRET_KEY: z.string(),
+
+    // Maintenance
+    MAINTENANCE_MODE: z.string().optional().default('false'),
+    MAINTENANCE_MESSAGE: z.string().optional().default('Hệ thống đang bảo trì nâng cấp. Vui lòng quay lại sau!'),
 });
 
 // Process env validation
@@ -113,6 +117,10 @@ const envProcess = envSchema.safeParse({
     // Realtime Service
     REALTIME_SERVICE_URL: process.env.REALTIME_SERVICE_URL,
     INTERNAL_SECRET_KEY: process.env.INTERNAL_SECRET_KEY,
+
+    // Maintenance
+    MAINTENANCE_MODE: process.env.MAINTENANCE_MODE,
+    MAINTENANCE_MESSAGE: process.env.MAINTENANCE_MESSAGE,
 });
 
 if (!envProcess.success) {
